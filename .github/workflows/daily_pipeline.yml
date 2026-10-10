@@ -1,0 +1,35 @@
+name: Daily Instantly pipeline
+
+on:
+  schedule:
+    - cron: "17 11 * * *"   # every day at 11:17 UTC (6:17am Central)
+  workflow_dispatch:         # adds a "Run workflow" button for manual runs
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    env:
+      INSTANTLY_API_KEY: ${{ secrets.INSTANTLY_API_KEY }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GOOGLE_APPLICATION_CREDENTIALS: gcp-key.json
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install libraries
+        run: pip install -r requirements.txt
+
+      - name: Write Google key file from secret
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: printf '%s' "$GCP_SA_KEY" > gcp-key.json
+
+      - name: Run pipeline
+        run: python run_pipeline.py
