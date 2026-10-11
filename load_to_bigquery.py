@@ -11,6 +11,7 @@ client = bigquery.Client(project=project_id)
 files = {"data/daily_analytics.csv": "daily_analytics",
         "data/steps_analytics.csv": "steps_analytics",
         "data/leads.csv": "leads",
+        "data/replies.csv": "replies",
 }
 
 job_config = bigquery.LoadJobConfig(
