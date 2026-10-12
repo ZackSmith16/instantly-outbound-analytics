@@ -97,7 +97,7 @@ Instantly webhooks ─► Cloud Run function ───────────�
 
 - **Reply counts:** Instantly reports 10 replies and 12 auto-replies, while this pipeline classifies 9 real replies and 13 auto-replies. The one-reply difference is definitional and most likely comes from a reply that Instantly counts as human but that matches this pipeline's auto-reply rules.
 - **"Leads who replied"** on the Replies & Leads page counts any reply, including auto-replies, so it's useful for comparing segments but isn't a measure of interest.
-- **Leads:** 1,078 leads are contacted in the analytics endpoint vs. 1,079 lead records, because most likely a lead that was added but never sent to.
+- **Leads:** 1,078 leads are contacted in the analytics endpoint vs. 1,079 lead records, most likely because one lead was added but never sent to.
 
 ---
 
