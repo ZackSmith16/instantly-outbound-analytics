@@ -33,3 +33,6 @@ jobs:
 
       - name: Run pipeline
         run: python run_pipeline.py
+
+      - name: Run Dataform transformations
+        run: python trigger_dataform.py
