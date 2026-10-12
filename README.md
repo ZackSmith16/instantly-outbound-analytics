@@ -22,9 +22,9 @@ This pipeline answers those questions automatically every day.
 ## Architecture
 
 ```
-                 ┌──────────────────────── daily batch (11:17 UTC) ───────────────────────┐
+                 ┌─────────────────────────── daily batch (GitHub Actions) ───────────────────────────┐
 Instantly API v2 ─► Python extract scripts ─► BigQuery: instantly_raw ─► Dataform ─► Looker Studio
-                     (GitHub Actions cron)                                (11:47 UTC)
+                                                                       (triggered after the load)
                                                      ▲
 Instantly webhooks ─► Cloud Run function ────────────┘  (real-time events → webhook_events)
 ```
@@ -32,10 +32,10 @@ Instantly webhooks ─► Cloud Run function ───────────�
 | Layer | Tool | What it does |
 |---|---|---|
 | Extract | Python (`requests`, `pandas`) | Pulls daily analytics, step analytics, leads, and replies from the Instantly API v2, with pagination and rate-limit handling |
-| Orchestrate | GitHub Actions | Runs `run_pipeline.py` daily; credentials are stored as GitHub Secrets |
+| Orchestrate | GitHub Actions | Runs `run_pipeline.py` daily, then starts the Dataform workflow and waits for it to finish; credentials are stored as GitHub Secrets |
 | Load | `google-cloud-bigquery` | Loads CSVs into `instantly_raw` (full refresh, `WRITE_TRUNCATE`) |
 | Real-time | Cloud Run function | Receives Instantly webhooks, checks a shared-secret header, and stores raw JSON in a partitioned table |
-| Transform | Dataform (SQLX) | Staging → marts layers, with data-quality assertions; scheduled daily |
+| Transform | Dataform (SQLX) | Staging → marts layers, with data-quality assertions |
 | Report | Looker Studio | Three-page dashboard: Overview, Sequence, Replies & Leads |
 
 ---
@@ -67,6 +67,8 @@ Instantly webhooks ─► Cloud Run function ───────────�
 **Rates are ratios of sums, never averages of rates.** Every reply rate in Looker is a calculated field (`SUM(replies) / SUM(denominator)`), so it stays correct when the data is filtered or totaled.
 
 **Two reply rates, clearly labeled.** *Per lead* (replies ÷ leads contacted) measures campaign reach; *per email* (replies ÷ emails sent) measures how efficient each send is. They answer different questions, and both are labeled with their denominator.
+
+**Each step triggers the next.** GitHub's scheduled runs can start hours late, so a fixed time gap between the load and Dataform meant Dataform sometimes transformed the previous day's data. GitHub Actions now starts the Dataform run itself once the load finishes, and the job fails if Dataform fails.
 
 **Partial weeks are excluded.** The current week is filtered out of the weekly funnel, so the trend line doesn't fake a drop-off every Monday.
 
@@ -117,7 +119,7 @@ The Instantly API key only needs **read-only** scope. The service account needs 
 
 ### Maintenance rule (Dataform)
 
-The scheduled Dataform run uses the **production release config**, which compiles from the `main` branch. After any SQLX change:
+The Dataform run started by GitHub Actions uses the **production release config**, which compiles from the `main` branch. After any SQLX change:
 
 1. Commit → **Push to default branch**
 2. Release configurations → production → **New compilation**
@@ -130,7 +132,6 @@ If you skip step 2, the schedule keeps running the old code.
 
 - [ ] `stg_webhook_events`: model real-time events (sends, opens, bounces) and exclude test payloads
 - [ ] Move secrets to Google Secret Manager
-- [ ] Trigger Dataform from GitHub Actions right after the load finishes, instead of relying on a 30-minute time gap
 - [ ] Alert (Slack or email) when a reply is classified as Interested
 
 ---
@@ -144,6 +145,7 @@ If you skip step 2, the schedule keeps running the old code.
 ├── replies.py               # GET /emails (received, rate-limited)
 ├── load_to_bigquery.py      # CSV → instantly_raw
 ├── run_pipeline.py          # runs all of the above in order
+├── trigger_dataform.py      # starts the Dataform run after the load and waits for the result
 ├── webhook/main.py          # Cloud Run webhook receiver
 └── .github/workflows/daily_pipeline.yml
 ```
