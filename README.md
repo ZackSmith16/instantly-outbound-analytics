@@ -49,6 +49,7 @@ Instantly webhooks ─► Cloud Run function ───────────�
 - `stg_steps`: step/variant performance (step 0 → "Email 1", variant 0 → "A")
 - `stg_leads`: lead status flags with **no PII** (emails and names stay in raw)
 - `stg_replies`: rule-based reply classification (see below)
+- `stg_webhook_events`: real-time events (sends, opens, sequence completions) parsed from raw JSON, with duplicate deliveries and test events removed; leads are identified by a SHA-256 hash instead of their email
 
 **`instantly_marts`**: tables the dashboard reads
 - `mart_weekly_funnel`: weekly sends, new leads, replies, and running totals (completed weeks only)
@@ -71,6 +72,8 @@ Instantly webhooks ─► Cloud Run function ───────────�
 **Each step triggers the next.** GitHub's scheduled runs can start hours late, so a fixed time gap between the load and Dataform meant Dataform sometimes transformed the previous day's data. GitHub Actions now starts the Dataform run itself once the load finishes, and the job fails if Dataform fails.
 
 **Partial weeks are excluded.** The current week is filtered out of the weekly funnel, so the trend line doesn't fake a drop-off every Monday.
+
+**Webhooks are deduplicated.** Instantly delivers webhooks at least once, so a retry can arrive twice. Each event gets a fingerprint (an MD5 hash of its full payload), and only the first copy is kept.
 
 **PII stays in the raw layer.** Staging and mart tables carry IDs and categories, not names or email addresses.
 
@@ -130,7 +133,7 @@ If you skip step 2, the schedule keeps running the old code.
 
 ## Roadmap
 
-- [ ] `stg_webhook_events`: model real-time events (sends, opens, bounces) and exclude test payloads
+- [ ] Mart on webhook events: daily sends per inbox and leads who finished the sequence with no reply
 - [ ] Move secrets to Google Secret Manager
 - [ ] Alert (Slack or email) when a reply is classified as Interested
 
