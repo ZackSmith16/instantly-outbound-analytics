@@ -2,7 +2,7 @@
 
 An automated pipeline that pulls cold-email campaign data out of Instantly.ai, models it in BigQuery with Dataform, and reports on it in Looker Studio. Instantly has no native Looker Studio connector, so this project builds one end to end.
 
-**[View the live dashboard →](LINK_HERE)**
+**[View the live dashboard →](https://datastudio.google.com/reporting/70b5427a-b1c7-4ef0-84ae-2d9e4f8a197d)**
 
 ---
 
